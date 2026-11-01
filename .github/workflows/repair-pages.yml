@@ -1,0 +1,29 @@
+name: Repair blocked Pages deployment
+on:
+  push:
+    paths:
+      - .github/workflows/repair-pages.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  actions: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const repo = context.repo;
+            const id = '5403b5cb126d39684f7b64f4a7ee5524dd0c92fb';
+            try {
+              await github.request('POST /repos/{owner}/{repo}/pages/deployments/{pages_deployment_id}/cancel', {...repo, pages_deployment_id: id});
+              core.info('Cancelled stale Pages deployment.');
+            } catch (e) {
+              if (e.status !== 404) throw e;
+              core.info('Old deployment is no longer present.');
+            }
+            await github.request('POST /repos/{owner}/{repo}/pages/builds', repo);
+            core.info('Requested fresh Pages build.');
