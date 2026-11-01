@@ -22,8 +22,11 @@ jobs:
               await github.request('POST /repos/{owner}/{repo}/pages/deployments/{pages_deployment_id}/cancel', {...repo, pages_deployment_id: id});
               core.info('Cancelled stale Pages deployment.');
             } catch (e) {
-              if (e.status !== 404) throw e;
+              if (e.status !== 404 && !String(e.message).includes("as it's finished")) throw e;
               core.info('Old deployment is no longer present.');
             }
+            const page = (await github.request('GET /repos/{owner}/{repo}/pages', repo)).data;
+            core.info(JSON.stringify({status: page.status, build_type: page.build_type, source: page.source}));
+            await github.request('PUT /repos/{owner}/{repo}/pages', {...repo, source: page.source, build_type: page.build_type});
             await github.request('POST /repos/{owner}/{repo}/pages/builds', repo);
             core.info('Requested fresh Pages build.');
